@@ -1,0 +1,8 @@
+praw
+tensorflow
+Keras
+matplotlib
+pillow
+pandas
+skdr
+mlxtend
