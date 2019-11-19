@@ -4,5 +4,5 @@ Keras
 matplotlib
 pillow
 pandas
-skdr
 mlxtend
+progressbar2
