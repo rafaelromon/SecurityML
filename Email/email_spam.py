@@ -1,5 +1,4 @@
 import tensorflow as tf
-from keras_preprocessing.image import ImageDataGenerator
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -11,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from gensim.models import Word2Vec
 from tensorflow.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 import io
+import pickle
 
 dir = os.path.join('Dataset')
 df = pd.read_csv('Dataset/spam.csv',delimiter=';',encoding='latin-1')
@@ -35,6 +35,10 @@ sequences_matrix = sequence.pad_sequences(sequences,maxlen=max_len)
 test_sequences = tok.texts_to_sequences(X_test)
 test_sequences_matrix = sequence.pad_sequences(test_sequences,maxlen=max_len)
 
+# saving tokenizer
+with open('tokenizer.pickle', 'wb') as handle:
+    pickle.dump(tok, handle, protocol=pickle.HIGHEST_PROTOCOL)
+exit()
 model = tf.keras.models.Sequential([
     tf.keras.layers.Embedding(max_words, 100, input_length=max_len),
     tf.keras.layers.LSTM(64),
