@@ -5,39 +5,32 @@ import os
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D
+from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, BatchNormalization
+from keras.applications import DenseNet121
 from keras.models import Sequential
-from keras.preprocessing import image
 from keras.preprocessing.image import ImageDataGenerator
 from mlxtend.plotting import plot_confusion_matrix
+from sklearn.metrics import confusion_matrix
+import streamlit as st
 
-
-# TODO
-#     Batch normalization
-#     Dropout
-#     Image augmentation
-#     Confusion matrix
-#
 from tensorflow_core.python.keras.models import load_model
+
+IMG_HEIGHT = 255
+IMG_WIDTH = 255
+
+BATCH_SIZE = 128
+
+PATH = "dataset"
+TRAIN_DIR = os.path.join(PATH, 'train')
+VALIDATION_DIR = os.path.join(PATH, 'validation')
+EPOCHS = 15
 
 
 def train():
-    matplotlib.use('TkAgg')
-
-    PATH = "dataset"
-
-    batch_size = 128
-    epochs = 15
-    IMG_HEIGHT = 300
-    IMG_WIDTH = 300
-
-    train_dir = os.path.join(PATH, 'train')
-    validation_dir = os.path.join(PATH, 'validation')
-
-    train_sfw_dir = os.path.join(train_dir, 'sfw')  # directory with our training sfw pictures
-    train_nsfw_dir = os.path.join(train_dir, 'nsfw')  # directory with our training nsfw pictures
-    validation_sfw_dir = os.path.join(validation_dir, 'sfw')  # directory with our validation sfw pictures
-    validation_nsfw_dir = os.path.join(validation_dir, 'nsfw')  # directory with our validation nsfw pictures
+    train_sfw_dir = os.path.join(TRAIN_DIR, 'sfw')  # directory with our training sfw pictures
+    train_nsfw_dir = os.path.join(TRAIN_DIR, 'nsfw')  # directory with our training nsfw pictures
+    validation_sfw_dir = os.path.join(VALIDATION_DIR, 'sfw')  # directory with our validation sfw pictures
+    validation_nsfw_dir = os.path.join(VALIDATION_DIR, 'nsfw')  # directory with our validation nsfw pictures
 
     num_sfw_tr = len(os.listdir(train_sfw_dir))
     num_nsfw_tr = len(os.listdir(train_nsfw_dir))
@@ -57,36 +50,38 @@ def train():
     print("Total training images:", total_train)
     print("Total validation images:", total_val)
 
-    train_image_generator = ImageDataGenerator(rescale=1. / 255)  # Generator for our training data
     validation_image_generator = ImageDataGenerator(rescale=1. / 255)  # Generator for our validation data
 
     image_gen_train = ImageDataGenerator(
         rescale=1. / 255,
-        rotation_range=45,
+        rotation_range=30,
         width_shift_range=.15,
         height_shift_range=.15,
         horizontal_flip=True,
-        zoom_range=0.5
+        zoom_range=0.2
     )
 
-    train_data_gen = image_gen_train.flow_from_directory(batch_size=batch_size,
-                                                         directory=train_dir,
+    train_data_gen = image_gen_train.flow_from_directory(batch_size=BATCH_SIZE,
+                                                         directory=TRAIN_DIR,
                                                          shuffle=True,
                                                          target_size=(IMG_HEIGHT, IMG_WIDTH),
+                                                         color_mode="grayscale",  # TODO cambiado para transfer
                                                          class_mode='binary')
 
-    val_data_gen = validation_image_generator.flow_from_directory(batch_size=batch_size,
-                                                                  directory=validation_dir,
+    val_data_gen = validation_image_generator.flow_from_directory(batch_size=BATCH_SIZE,
+                                                                  directory=VALIDATION_DIR,
                                                                   target_size=(IMG_HEIGHT, IMG_WIDTH),
+                                                                  color_mode="grayscale",
                                                                   class_mode='binary')
 
     sample_training_images, _ = next(train_data_gen)
 
     model = Sequential([
-        Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH, 3)),
+        Conv2D(16, 3, padding='same', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH, 1)),
         MaxPooling2D(),
         Conv2D(32, 3, padding='same', activation='relu'),
         MaxPooling2D(),
+        BatchNormalization(),
         Conv2D(64, 3, padding='same', activation='relu'),
         MaxPooling2D(),
         Flatten(),
@@ -94,18 +89,24 @@ def train():
         Dense(1, activation='sigmoid')
     ])
 
+    # model = Sequential({
+    #     DenseNet121(weights='imagenet', include_top=False, input_shape=(IMG_HEIGHT, IMG_WIDTH, 3)),
+    #     Flatten(),
+    #     Dense(1, activation='sigmoid')
+    # })
+
     model.compile(optimizer='adam',
                   loss='binary_crossentropy',
                   metrics=['accuracy'])
 
-    model.summary()
+    # model.summary()
 
     history = model.fit_generator(
         train_data_gen,
-        steps_per_epoch=total_train // batch_size,
-        epochs=epochs,
+        steps_per_epoch=total_train // BATCH_SIZE,
+        epochs=EPOCHS,
         validation_data=val_data_gen,
-        validation_steps=total_val // batch_size
+        validation_steps=total_val // BATCH_SIZE
     )
 
     acc = history.history['accuracy']
@@ -114,7 +115,7 @@ def train():
     loss = history.history['loss']
     val_loss = history.history['val_loss']
 
-    epochs_range = range(epochs)
+    epochs_range = range(EPOCHS)
 
     plt.figure(figsize=(8, 8))
     plt.subplot(1, 2, 1)
@@ -129,59 +130,38 @@ def train():
     plt.legend(loc='upper right')
     plt.title('Training and Validation Loss')
     plt.show()
-
-    model.save('my_model.h5')
+    plt.savefig("history.png")
 
     return model
 
-
 def plot(model):
-    img_path = os.path.join('dataset/validation')
+    test_datagen = ImageDataGenerator(rescale=1. / 255)
 
-    nsfw = 0
-    sfw = 0
-    should_be = 0
-    false_positives = 0
-    false_negatives = 0
+    validation_generator = test_datagen.flow_from_directory(os.path.join(PATH, 'validation'),
+                                                            target_size=(IMG_HEIGHT, IMG_WIDTH),
+                                                            batch_size=BATCH_SIZE,
+                                                            color_mode="grayscale",
+                                                            class_mode='binary')
 
-    for subdir, dirs, files in os.walk(img_path):
-        if "nsfw" in subdir or "sfw" in subdir:
-            if "sfw" in subdir:
-                should_be = 1
-            else:
-                should_be = 0
+    Y_pred = model.predict_generator(validation_generator, 249 // BATCH_SIZE + 1)
+    y_pred = np.around(Y_pred)
+    confusion_matrix(validation_generator.classes, y_pred)
 
-            for file in files:
-                path_to = os.path.join(subdir, file)
-                img = image.load_img(path_to, target_size=(300, 300), grayscale=False)
-                img_tensor = image.img_to_array(img)
-                img_tensor = np.expand_dims(img_tensor, axis=0)
-                img_tensor /= 255.
-
-                res = model.predict(img_tensor)
-
-                if res > 0.5:
-                    if should_be == 0:
-                        false_positives += 1
-                        sfw += 1
-                    else:
-                        if should_be == 1:
-                            false_negatives += 1
-                            nsfw += 1
-
-    total_nsfw = nsfw + false_positives - false_negatives
-    total_psfw = sfw + false_negatives - false_positives
-
-    # Confusion matrix
-    cm = np.array([[nsfw - false_negatives, false_positives], [false_negatives, sfw - false_positives]])
+    cm = confusion_matrix(validation_generator.classes, y_pred)
     plt.figure()
     plot_confusion_matrix(cm, figsize=(12, 8), hide_ticks=True)
     plt.xticks(range(2), ['NSFW', 'SFW'], fontsize=16)
     plt.yticks(range(2), ['NSFW', 'SFW'], fontsize=16)
     plt.show()
+    # st.map(plt)
+    # plt.savefig("matrix.png")
 
 
 if __name__ == '__main__':
-    # model = train()
+    # st.title('NSFW Classifier')
+    # matplotlib.use('TkAgg')
+
+    model = train()
+    model.save('my_model.h5')
     model = load_model("my_model.h5")
     plot(model)
