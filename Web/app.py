@@ -7,6 +7,9 @@ import os
 import tensorflow as tf
 import pickle
 from keras.preprocessing.sequence import pad_sequences
+from keras.backend import manual_variable_initialization
+
+manual_variable_initialization(True)
 
 path_model_malware = os.path.join("models/malware.h5")
 path_model_email = os.path.join("models/spam.h5")
@@ -28,6 +31,8 @@ option = st.sidebar.selectbox(
 
 if option=="Malware":
     st.title('Malware detection')
+    st.text("This model has been trained with a dataset with over 200000 .exe "
+            "samples,\n validated with www.virustotal.com.")
 
     filename = st.text_input('Enter a file path:')
     try:
@@ -43,15 +48,13 @@ if option=="Malware":
 elif option=="Email":
     st.title('Email spam detection')
 
+    st.text("This model has been trained with a dataset with over 5000 emails")
+
     email = st.text_input('Enter a sample email')
-    print(email)
     tokenized = tokenizer.texts_to_sequences([email])
-    print(tokenized)
     sequence_padded = pad_sequences(tokenized, maxlen=max_len)
-    print(sequence_padded)
     try:
         result = model_email.predict(sequence_padded)[0][0]
-        print(result)
         if round(result)==1:
             st.text("Your email is spam with a probability of %.2f"%float(result))
         else:

@@ -20,24 +20,6 @@ model = tf.keras.models.load_model(path_model, compile=False)
 e = model.layers[0]
 weights = e.get_weights()[0]
 
-# training_set = pd.read_csv("Dataset/spam_test.csv", encoding='latin-1')
-# valid_set = pd.read_csv("Dataset/spam_train.csv", encoding='latin-1')
-#
-#
-# X_train = training_set.Mail
-# X_test = training_set.Mail
-#
-# sentences = []
-# for d in pd.concat([X_train, X_test]):
-#     # d = d.replace('"', '')
-#     d = regex.sub('', d)
-#     d = d.replace('www.', '')
-#     d = d.replace('.com', '')
-#     d = d.lower()
-#     sentences.append(d.split(' '))
-
-# test_model = Word2Vec(sentences)
-# words = list(test_model.wv.vocab)
 df = pd.read_csv('Dataset/spam.csv',delimiter=';',encoding='latin-1')
 mail = df.v2
 words = set()

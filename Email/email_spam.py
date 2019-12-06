@@ -11,11 +11,15 @@ from gensim.models import Word2Vec
 from tensorflow.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 import io
 import pickle
+from keras.backend import manual_variable_initialization
+
+manual_variable_initialization(True)
+
 
 dir = os.path.join('Dataset')
-df = pd.read_csv('Dataset/spam.csv',delimiter=';',encoding='latin-1')
-mail = df.v2
-label = df.v1
+data = pd.read_csv('Dataset/spam.csv',delimiter=';',encoding='latin-1')
+mail = data.v2
+label = data.v1
 le = LabelEncoder()
 label = le.fit_transform(label)
 label = label.reshape(-1, 1)
@@ -25,6 +29,7 @@ vocab = set()
 for e in mail:
     for w in e.split():
         vocab.add(w)
+
 max_words = len(vocab) # Vocab max size
 max_len = 100 # Sentences padded to 100 words vector
 tok = Tokenizer(num_words=max_words)
@@ -38,9 +43,11 @@ test_sequences_matrix = sequence.pad_sequences(test_sequences,maxlen=max_len)
 # saving tokenizer
 with open('tokenizer.pickle', 'wb') as handle:
     pickle.dump(tok, handle, protocol=pickle.HIGHEST_PROTOCOL)
-exit()
+# exit()
+
+
 model = tf.keras.models.Sequential([
-    tf.keras.layers.Embedding(max_words, 100, input_length=max_len),
+    tf.keras.layers.Embedding(max_words, 50, input_length=max_len),
     tf.keras.layers.LSTM(64),
     tf.keras.layers.Dense(512, activation='relu'),
     tf.keras.layers.BatchNormalization(),
@@ -48,16 +55,29 @@ model = tf.keras.models.Sequential([
 ])
 
 csv_logger = CSVLogger('log.csv')
-#min_delta = 0.1 - quiere decir que cada epoch debe mejorar un 0.1% por lo menos, vamos de 0.82 a 0.821
 early_stop = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=3, mode='min', restore_best_weights=True)
 mc = ModelCheckpoint('spam.h5', monitor='val_loss', mode='min', verbose=1)
+
+
 model.compile(loss='binary_crossentropy',optimizer=RMSprop(),metrics=['acc'])
 
 
-history = model.fit(sequences_matrix,Y_train,batch_size=128,epochs=15,
+history = model.fit(sequences_matrix,Y_train,batch_size=128,epochs=10,
                     validation_data=(test_sequences_matrix, Y_test),
-                    callbacks=[csv_logger, mc, early_stop])
+                    # callbacks=[csv_logger, mc, early_stop]
+                    )
 
+model.save('spam.h5')
+
+# print(model.predict(test_sequences_matrix[:10]))
+
+# path_model = os.path.join('spam.h5')
+# model = tf.keras.models.load_model(path_model)
+#
+#
+# print(Y_test[:20])
+#
+# print(model.predict(test_sequences_matrix[:20]))
 
 e = model.layers[0]
 weights = e.get_weights()[0]
