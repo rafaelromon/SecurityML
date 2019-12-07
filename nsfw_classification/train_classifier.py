@@ -169,6 +169,6 @@ def predict(model1, file):
 
 if __name__ == '__main__':
     model = train()
-    model.save('my_model.h5')
-    model = load_model("my_model.h5")
+    model.save("../streamlit_web/models/nfsw.h5")
+    model = load_model("../streamlit_web/models/nfsw.h5")
     plot(model)
