@@ -2,9 +2,11 @@
 
 
 import shutil
+
 import praw
 # import progressbar
 import requests
+
 import nsfw_classification.utils.settings as settings
 
 LIMIT = 800
