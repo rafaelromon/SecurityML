@@ -2,23 +2,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, BatchNormalization
-from keras.applications import DenseNet121
 from keras.models import Sequential
 from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import load_img, img_to_array
 from mlxtend.plotting import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix
-import streamlit as st
-
 from tensorflow_core.python.keras.models import load_model
 
 IMG_HEIGHT = 255
 IMG_WIDTH = 255
 
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 
 PATH = "dataset"
 TRAIN_DIR = os.path.join(PATH, 'train')
@@ -129,10 +126,11 @@ def train():
     plt.plot(epochs_range, val_loss, label='Validation Loss')
     plt.legend(loc='upper right')
     plt.title('Training and Validation Loss')
-    plt.show()
     plt.savefig("history.png")
+    plt.show()
 
     return model
+
 
 def plot(model):
     test_datagen = ImageDataGenerator(rescale=1. / 255)
@@ -152,15 +150,24 @@ def plot(model):
     plot_confusion_matrix(cm, figsize=(12, 8), hide_ticks=True)
     plt.xticks(range(2), ['NSFW', 'SFW'], fontsize=16)
     plt.yticks(range(2), ['NSFW', 'SFW'], fontsize=16)
-    plt.show()
     # st.map(plt)
-    # plt.savefig("matrix.png")
+    plt.savefig("matrix.png")
+    plt.show()
+
+
+def predict(model1, file):
+    img_width, img_height = 300, 300
+    x = load_img(file, target_size=(img_width, img_height))
+    x = img_to_array(x)
+    x = np.expand_dims(x, axis=0)
+    array = model1.predict(x)
+    result = array[0]
+    # print(result)
+    answer = np.argmax(result)
+    return answer
 
 
 if __name__ == '__main__':
-    # st.title('NSFW Classifier')
-    # matplotlib.use('TkAgg')
-
     model = train()
     model.save('my_model.h5')
     model = load_model("my_model.h5")

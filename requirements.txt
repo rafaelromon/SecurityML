@@ -1,9 +1,9 @@
 praw
-tensorflow-gpu
 Keras
 matplotlib
 pillow
 pandas
 mlxtend
+tensorflow-gpu
 progressbar2
 streamlit
