@@ -1,8 +1,10 @@
 praw
-tensorflow
 Keras
 matplotlib
 pillow
 pandas
 mlxtend
+tensorflow-gpu
+progressbar2
+streamlit
 lief

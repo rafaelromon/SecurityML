@@ -20,6 +20,7 @@ venv.bak/
 
 # General
 media/
+*/dataset/
 
 nsfw_classification/dataset/
 
