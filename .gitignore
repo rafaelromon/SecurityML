@@ -21,6 +21,8 @@ venv.bak/
 # General
 media/
 
+nsfw_classification/dataset/
+
 # IntelliJ project files
 *.iml
 *.iws
