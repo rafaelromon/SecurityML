@@ -22,6 +22,8 @@ venv.bak/
 media/
 */dataset/
 
+nsfw_classification/dataset/
+
 # IntelliJ project files
 *.iml
 *.iws
