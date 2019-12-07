@@ -1,6 +1,7 @@
+import logging as log
+
 import lief
 import numpy as np
-import logging as log
 
 classes_replace = {
     'pe-legit': 0,
@@ -115,10 +116,10 @@ def encode_libraries(pe):
 # encode a few simple attributes of the PE sections
 def encode_sections(pe):
     sections = [{'characteristics': ','.join(map(str, s.characteristics_lists)),
-        'entropy': s.entropy,
-        'name': s.name,
-        'size': s.size,
-        'vsize': s.virtual_size} for s in pe.sections]
+                 'entropy': s.entropy,
+                 'name': s.name,
+                 'size': s.size,
+                 'vsize': s.virtual_size} for s in pe.sections]
 
     num_sections = len(sections)
     max_entropy = max([s['entropy'] for s in sections]) if num_sections else 0.0
