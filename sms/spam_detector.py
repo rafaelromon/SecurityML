@@ -28,18 +28,20 @@ def train():
     input_shape = (MAXLEN,)
 
     # TODO error while loading model
-    # leaky_relu = keras.layers.LeakyReLU(alpha=0.3)
+    leaky_relu = keras.layers.LeakyReLU(alpha=0.3)
 
     model_scheme = [
 
         Reshape(input_shape=input_shape, target_shape=(MAXLEN, 1)),
 
-        Conv1D(128, kernel_size=2, strides=1, activation="relu", kernel_regularizer='l1'),
+        Conv1D(128, kernel_size=2, strides=1, kernel_regularizer='l1'),
+        LeakyReLU(),
         MaxPooling1D(pool_size=2),
 
         Flatten(),
 
-        Dense(64, activation="relu"),
+        Dense(64),
+        LeakyReLU(),
         BatchNormalization(),
         Dropout(dropout_rate),
 
@@ -92,8 +94,9 @@ def train():
 
 if __name__ == '__main__':
     model = train()
-    model.save('my_model.h5')
-    # TODO error while loading model
-    model = load_model("my_model.h5")
+
+    model.save('../streamlit_web/models/sms.h5')
+    model = load_model("../streamlit_web/models/sms.h5",
+                       custom_objects={"softmax_v2": tf.nn.softmax})
 
     # TODO plot confusion matrix
