@@ -114,12 +114,12 @@ elif option == "NSFW":
         elif prediction == 1:
             st.write("SFW")
 
-elif option == "Email":
-    st.title('Email spam detection')
+elif option == "SMS":
+    st.title('SMS spam detection')
 
     st.text("This model has been trained with a dataset with over 3000 sms")
 
-    sms = st.text_input('Enter a sample email')
+    sms = st.text_input('Enter a sample SMS')
     tokenized = tokenizer.texts_to_sequences([sms])
     sequence_padded = pad_sequences(tokenized, maxlen=max_len)
 

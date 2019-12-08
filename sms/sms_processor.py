@@ -36,6 +36,7 @@ def process_data(file):
     print('MESSAGE MAXLEN = {}'.format(maxlen))
 
     train_features, test_features, train_labels, test_labels = train_test_split(X, Y, test_size=0.4)
+
     output_path = 'dataset/processed/'
     np.save('{}x.npy'.format(output_path), train_features)
     np.save('{}y.npy'.format(output_path), train_labels)
