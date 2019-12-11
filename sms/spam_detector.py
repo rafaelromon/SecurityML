@@ -29,9 +29,6 @@ def train():
 
     input_shape = (MAXLEN,)
 
-    # TODO error while loading model
-    leaky_relu = keras.layers.LeakyReLU(alpha=0.3)
-
     model_scheme = [
 
         Reshape(input_shape=input_shape, target_shape=(MAXLEN, 1)),
@@ -93,16 +90,16 @@ def train():
 
     return model
 
+
 def plot(model):
     test_X = np.load('dataset/processed/test_x.npy')
     test_Y = np.load('dataset/processed/test_y.npy')
 
-    Y_pred =  model.predict(np.array(test_X))
-    y_pred = np.around(Y_pred)
+    Y_pred = model.predict(np.array(test_X))
+    y_pred = np.around(Y_pred, 2)  # We divide because it is multilabel
 
     cm = multilabel_confusion_matrix(test_Y, y_pred)
     plt.figure()
-
 
     plot_confusion_matrix(cm[0] + cm[1], figsize=(12, 8), hide_ticks=True)
     plt.xticks(range(2), ['SPAM', 'HAM'], fontsize=16)
@@ -110,6 +107,7 @@ def plot(model):
     # st.map(plt)
     plt.savefig("matrix.png")
     plt.show()
+
 
 if __name__ == '__main__':
     model = train()
