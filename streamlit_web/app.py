@@ -83,25 +83,25 @@ elif option == "Email":
 elif option == "NSFW":
 
     showpred = 0
-    test_path = 'dataset/validation/nsfw/'
+    img_path = 'dataset/nsfw_classification/'
     st.sidebar.info(
         "This is demo identifies classifies picture as SFW or NSFW using ML, all the photos from this demo have been downloaded from Reddit.")
 
-    onlyfiles = [f for f in listdir("dataset/validation/nsfw") if isfile(join("dataset/validation/nsfw", f))]
+    onlyfiles = [f for f in listdir(img_path) if isfile(join(img_path, f))]
 
     st.sidebar.title("Predict New Images")
     imageselect = st.sidebar.selectbox("Pick an image.", onlyfiles)
 
     if st.sidebar.button('Predict'):
         showpred = 1
-        prediction = predict(model_nsfw, test_path + imageselect)
+        prediction = predict(model_nsfw, img_path + imageselect)
 
         st.title('NSFW Classification')
         st.write("Pick an image from the left. You'll be able to view the image.")
         st.write("When you're ready, submit a prediction on the left.")
 
     st.write("")
-    image = Image.open(test_path + imageselect)
+    image = Image.open(img_path + imageselect)
 
     st.image(image.filter(ImageFilter.BoxBlur(20)), use_column_width=True)
     if showpred == 1:
