@@ -78,11 +78,11 @@ def train():
         MaxPooling2D(),
         Conv2D(32, 3, padding='same', activation='relu'),
         MaxPooling2D(),
-        BatchNormalization(),
-        Conv2D(64, 3, padding='same', activation='relu'),
-        MaxPooling2D(),
+        # BatchNormalization(),
+        # Conv2D(64, 3, padding='same', activation='relu'),
+        # MaxPooling2D(),
         Flatten(),
-        Dense(512, activation='relu'),
+        Dense(128, activation='relu'),
         Dense(1, activation='sigmoid')
     ])
 
