@@ -5,6 +5,8 @@ import tensorflow as tf
 from keras import optimizers
 from keras.engine.saving import load_model
 from keras.layers import *
+from mlxtend.plotting import plot_confusion_matrix
+from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 NUMBER_OF_CLASSES = 2
 MAXLEN = 171
@@ -45,7 +47,7 @@ def train():
         BatchNormalization(),
         Dropout(dropout_rate),
 
-        Dense(NUMBER_OF_CLASSES, activation=tf.nn.softmax)
+        Dense(2, activation='softmax')
 
     ]
 
@@ -91,6 +93,23 @@ def train():
 
     return model
 
+def plot(model):
+    test_X = np.load('dataset/processed/test_x.npy')
+    test_Y = np.load('dataset/processed/test_y.npy')
+
+    Y_pred =  model.predict(np.array(test_X))
+    y_pred = np.around(Y_pred)
+
+    cm = multilabel_confusion_matrix(test_Y, y_pred)
+    plt.figure()
+
+
+    plot_confusion_matrix(cm[0] + cm[1], figsize=(12, 8), hide_ticks=True)
+    plt.xticks(range(2), ['SPAM', 'HAM'], fontsize=16)
+    plt.yticks(range(2), ['SPAM', 'HAM'], fontsize=16)
+    # st.map(plt)
+    plt.savefig("matrix.png")
+    plt.show()
 
 if __name__ == '__main__':
     model = train()
@@ -99,4 +118,4 @@ if __name__ == '__main__':
     model = load_model("../streamlit_web/models/sms.h5",
                        custom_objects={"softmax_v2": tf.nn.softmax})
 
-    # TODO plot confusion matrix
+    plot(model)
