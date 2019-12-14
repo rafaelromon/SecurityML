@@ -18,15 +18,9 @@ import numpy as np
 
 def recall_threshold(threshold = 0.5):
     def recall(y_true, y_pred):
-        """Recall metric.
-        Computes the recall over the whole batch using threshold_value.
-        """
         threshold_value = threshold
-        # Adaptation of the "round()" used before to get the predictions. Clipping to make sure that the predicted raw values are between 0 and 1.
         y_pred = K.cast(K.greater(K.clip(y_pred, 0, 1), threshold_value), K.floatx())
-        # Compute the number of true positives. Rounding in prevention to make sure we have an integer.
         true_positives = K.round(K.sum(K.clip(y_true * y_pred, 0, 1)))
-        # Compute the number of positive targets.
         possible_positives = K.sum(K.clip(y_true, 0, 1))
         recall_ratio = true_positives / (possible_positives + K.epsilon())
         return recall_ratio
@@ -87,35 +81,25 @@ model.compile(loss='binary_crossentropy', optimizer=RMSprop(), metrics=['acc', r
 history = model.fit(sequences_matrix, Y_train, batch_size=128, epochs=10,
                     validation_data=(test_sequences_matrix, Y_test),
                     verbose=2,
-                    # callbacks=[csv_logger, mc, early_stop]
+                    callbacks=[csv_logger, mc, early_stop]
                     )
 
 
 model.save('spam.h5')
 
-# print(model.predict(test_sequences_matrix[:10]))
+e = model.layers[0]
+weights = e.get_weights()[0]
 
-# path_model = os.path.join('spam.h5')
-# model = tf.keras.models.load_model(path_model)
-#
-#
-# print(Y_test[:20])
-#
-# print(model.predict(test_sequences_matrix[:20]))
+out_v = io.open('vecs.tsv', 'w', encoding='utf-8')
+out_m = io.open('meta.tsv', 'w', encoding='utf-8')
 
-# e = model.layers[0]
-# weights = e.get_weights()[0]
-#
-# out_v = io.open('vecs.tsv', 'w', encoding='utf-8')
-# out_m = io.open('meta.tsv', 'w', encoding='utf-8')
-#
-# words = list(vocab)
-# for num, word in enumerate(words):
-#     vec = weights[num]
-#     out_m.write(word + "\n")
-#     out_v.write('\t'.join([str(x) for x in vec]) + "\n")
-# out_v.close()
-# out_m.close()
+words = list(vocab)
+for num, word in enumerate(words):
+    vec = weights[num]
+    out_m.write(word + "\n")
+    out_v.write('\t'.join([str(x) for x in vec]) + "\n")
+out_v.close()
+out_m.close()
 
 # Plot training and test acc and loss
 # summarize history for accuracy

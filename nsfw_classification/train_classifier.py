@@ -11,9 +11,10 @@ from keras.preprocessing.image import load_img, img_to_array
 from mlxtend.plotting import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix
 from tensorflow_core.python.keras.models import load_model
+from tensorflow.keras.utils import plot_model
 
-IMG_HEIGHT = 255
-IMG_WIDTH = 255
+IMG_HEIGHT = 224
+IMG_WIDTH = 224
 
 BATCH_SIZE = 64
 
@@ -78,32 +79,22 @@ def train():
         MaxPooling2D(),
         Conv2D(32, 3, padding='same', activation='relu'),
         MaxPooling2D(),
-        # BatchNormalization(),
-        # Conv2D(64, 3, padding='same', activation='relu'),
-        # MaxPooling2D(),
         Flatten(),
         Dense(128, activation='relu'),
         Dense(1, activation='sigmoid')
     ])
 
-    # model = Sequential({
-    #     DenseNet121(weights='imagenet', include_top=False, input_shape=(IMG_HEIGHT, IMG_WIDTH, 3)),
-    #     Flatten(),
-    #     Dense(1, activation='sigmoid')
-    # })
-
     model.compile(optimizer='adam',
                   loss='binary_crossentropy',
                   metrics=['accuracy'])
-
-    # model.summary()
 
     history = model.fit_generator(
         train_data_gen,
         steps_per_epoch=total_train // BATCH_SIZE,
         epochs=EPOCHS,
         validation_data=val_data_gen,
-        validation_steps=total_val // BATCH_SIZE
+        validation_steps=total_val // BATCH_SIZE,
+        verbose=2
     )
 
     acc = history.history['accuracy']
@@ -150,25 +141,24 @@ def plot(model):
     plot_confusion_matrix(cm, figsize=(12, 8), hide_ticks=True)
     plt.xticks(range(2), ['NSFW', 'SFW'], fontsize=16)
     plt.yticks(range(2), ['NSFW', 'SFW'], fontsize=16)
-    # st.map(plt)
     plt.savefig("matrix.png")
     plt.show()
 
 
 def predict(model1, file):
-    img_width, img_height = 300, 300
+    img_width, img_height = 224, 224
     x = load_img(file, target_size=(img_width, img_height))
     x = img_to_array(x)
     x = np.expand_dims(x, axis=0)
     array = model1.predict(x)
     result = array[0]
-    # print(result)
     answer = np.argmax(result)
     return answer
 
 
 if __name__ == '__main__':
     model = train()
-    model.save("../streamlit_web/models/nfsw.h5")
-    model = load_model("../streamlit_web/models/nfsw.h5")
+    model.save("../streamlit_web/models/nsfw.h5")
+    model = load_model("../streamlit_web/models/nsfw.h5")
+    plot_model(model, to_file='model.png', show_shapes=True)
     plot(model)
