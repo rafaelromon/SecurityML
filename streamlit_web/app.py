@@ -29,7 +29,7 @@ manual_variable_initialization(True)
 
 path_model_malware = os.path.join("models/malware.h5")
 path_model_email = os.path.join("models/spam.h5")
-path_model_sms = os.path.join("models/sms3.h5")
+path_model_sms = os.path.join("models/sms.h5")
 path_model_nsfw = os.path.join("models/nsfw.h5")
 model_malware = tf.keras.models.load_model(path_model_malware, compile=False)
 model_email = tf.keras.models.load_model(path_model_email, compile=False)
@@ -39,8 +39,11 @@ model_nsfw = tf.keras.models.load_model(path_model_nsfw, compile=False)
 
 max_len = 100
 # loading
-with open(os.path.join('tokenizer2.pickle'), 'rb') as handle:
-    tokenizer = pickle.load(handle)
+with open(os.path.join('tokenizer.pickle'), 'rb') as handle:
+    tokenizer_email = pickle.load(handle)
+
+with open(os.path.join('word_dict'), 'rb') as handle:
+    tokenizer_sms = pickle.load(handle)
 
 df = pd.DataFrame({
     'first column': ["Email", "Malware", "NSFW", "SMS"]
@@ -82,7 +85,7 @@ elif option == "Email":
     st.text("This model has been trained with a dataset with over 2500 emails")
 
     email = st.text_input('Enter a sample email')
-    tokenized = tokenizer.texts_to_sequences([email])
+    tokenized = tokenizer_email.texts_to_sequences([email])
     sequence_padded = pad_sequences(tokenized, maxlen=max_len)
     try:
         result = model_email.predict(sequence_padded)[0][0]
@@ -130,7 +133,7 @@ elif option == "SMS":
     st.text("This model has been trained with a dataset with over 3000 sms")
 
     sms = st.text_input('Enter a sample SMS')
-    tokenized = tokenizer.texts_to_sequences([sms])
+    tokenized = tokenizer_sms.texts_to_sequences([sms])
     sequence_padded = pad_sequences(tokenized, maxlen=max_len)
 
     try:
