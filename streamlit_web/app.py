@@ -29,17 +29,17 @@ manual_variable_initialization(True)
 
 path_model_malware = os.path.join("models/malware.h5")
 path_model_email = os.path.join("models/spam.h5")
-path_model_sms = os.path.join("models/sms.h5")
+path_model_sms = os.path.join("models/sms3.h5")
 path_model_nsfw = os.path.join("models/nsfw.h5")
 model_malware = tf.keras.models.load_model(path_model_malware, compile=False)
 model_email = tf.keras.models.load_model(path_model_email, compile=False)
-model_sms = tf.keras.models.load_model("../streamlit_web/models/sms.h5", compile=False,
+model_sms = tf.keras.models.load_model(path_model_sms, compile=False,
                                        custom_objects={"softmax_v2": tf.nn.softmax})
 model_nsfw = tf.keras.models.load_model(path_model_nsfw, compile=False)
 
 max_len = 100
 # loading
-with open(os.path.join('tokenizer.pickle'), 'rb') as handle:
+with open(os.path.join('tokenizer2.pickle'), 'rb') as handle:
     tokenizer = pickle.load(handle)
 
 df = pd.DataFrame({
@@ -55,9 +55,18 @@ if option == "Malware":
     st.text("This model has been trained with a dataset with over 200000 .exe "
             "samples,\n validated with www.virustotal.com.")
 
-    filename = st.text_input('Enter a file path:')
+    file_path = 'executables/'
+    st.sidebar.info(
+        "This is demo classifies executables as Malware or Safe using ML.")
+
+    onlyfiles = [f for f in listdir(file_path) if isfile(join(file_path, f))]
+
+    st.sidebar.title("Predict New File")
+    filename = st.sidebar.selectbox("Pick an executable.", onlyfiles)
+
+    # filename = st.text_input('Enter a file path:')
     try:
-        encoded = encode_pe(os.path.join(filename))
+        encoded = encode_pe(os.path.join(file_path+filename))
         encoded = [float(x) for x in encoded]
         result = model_malware.predict(np.array([encoded]))[0][0]
         if round(result) == 1:
@@ -70,13 +79,14 @@ if option == "Malware":
 elif option == "Email":
     st.title('Email spam detection')
 
-    st.text("This model has been trained with a dataset with over 5000 emails")
+    st.text("This model has been trained with a dataset with over 2500 emails")
 
     email = st.text_input('Enter a sample email')
     tokenized = tokenizer.texts_to_sequences([email])
     sequence_padded = pad_sequences(tokenized, maxlen=max_len)
     try:
         result = model_email.predict(sequence_padded)[0][0]
+        print(result)
         if round(result) == 1:
             st.text("Your email is spam with a probability of %.2f" % float(result))
         else:
@@ -89,7 +99,7 @@ elif option == "NSFW":
     showpred = 0
     img_path = 'dataset/nsfw_classification/'
     st.sidebar.info(
-        "This is demo identifies classifies picture as SFW or NSFW using ML, all the photos from this demo have been downloaded from Reddit.")
+        "This is demo classifies picture as SFW or NSFW using ML, all the photos from this demo have been downloaded from Reddit.")
 
     onlyfiles = [f for f in listdir(img_path) if isfile(join(img_path, f))]
 
@@ -98,14 +108,14 @@ elif option == "NSFW":
 
     if st.sidebar.button('Predict'):
         showpred = 1
-        prediction = predict(model_nsfw, img_path + imageselect)
+        prediction = predict(model_nsfw, os.path.join(img_path + imageselect))
 
         st.title('NSFW Classification')
         st.write("Pick an image from the left. You'll be able to view the image.")
         st.write("When you're ready, submit a prediction on the left.")
 
     st.write("")
-    image = Image.open(img_path + imageselect)
+    image = Image.open(os.path.join(img_path + imageselect))
 
     st.image(image.filter(ImageFilter.BoxBlur(20)), use_column_width=True)
     if showpred == 1:

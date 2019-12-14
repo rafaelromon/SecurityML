@@ -1,24 +1,49 @@
 import io
 import os
 import pickle
-
+import csv
 import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
-from keras.backend import manual_variable_initialization
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing import sequence
 from tensorflow.keras.preprocessing.text import Tokenizer
+from mlxtend.plotting import plot_confusion_matrix
+from sklearn.metrics import confusion_matrix
+import keras.backend as K
+import numpy as np
 
-manual_variable_initialization(True)
+def recall_threshold(threshold = 0.5):
+    def recall(y_true, y_pred):
+        """Recall metric.
+        Computes the recall over the whole batch using threshold_value.
+        """
+        threshold_value = threshold
+        # Adaptation of the "round()" used before to get the predictions. Clipping to make sure that the predicted raw values are between 0 and 1.
+        y_pred = K.cast(K.greater(K.clip(y_pred, 0, 1), threshold_value), K.floatx())
+        # Compute the number of true positives. Rounding in prevention to make sure we have an integer.
+        true_positives = K.round(K.sum(K.clip(y_true * y_pred, 0, 1)))
+        # Compute the number of positive targets.
+        possible_positives = K.sum(K.clip(y_true, 0, 1))
+        recall_ratio = true_positives / (possible_positives + K.epsilon())
+        return recall_ratio
+    return recall
 
+
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+K.manual_variable_initialization(True)
 dir = os.path.join('Dataset')
-data = pd.read_csv('Dataset/spam.csv', delimiter=';', encoding='latin-1')
-mail = data.v2
-label = data.v1
+data = pd.read_csv('Dataset/spam_or_not_spam.csv', delimiter=',')
+
+
+mail = data.email
+mail = mail.astype(str)
+label = data.label
 le = LabelEncoder()
 label = le.fit_transform(label)
 label = label.reshape(-1, 1)
@@ -57,12 +82,14 @@ csv_logger = CSVLogger('log.csv')
 early_stop = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=3, mode='min', restore_best_weights=True)
 mc = ModelCheckpoint('spam.h5', monitor='val_loss', mode='min', verbose=1)
 
-model.compile(loss='binary_crossentropy', optimizer=RMSprop(), metrics=['acc'])
+model.compile(loss='binary_crossentropy', optimizer=RMSprop(), metrics=['acc', recall_threshold(0.9)])
 
 history = model.fit(sequences_matrix, Y_train, batch_size=128, epochs=10,
                     validation_data=(test_sequences_matrix, Y_test),
+                    verbose=2,
                     # callbacks=[csv_logger, mc, early_stop]
                     )
+
 
 model.save('spam.h5')
 
@@ -76,19 +103,19 @@ model.save('spam.h5')
 #
 # print(model.predict(test_sequences_matrix[:20]))
 
-e = model.layers[0]
-weights = e.get_weights()[0]
-
-out_v = io.open('vecs.tsv', 'w', encoding='utf-8')
-out_m = io.open('meta.tsv', 'w', encoding='utf-8')
-
-words = list(vocab)
-for num, word in enumerate(words):
-    vec = weights[num]
-    out_m.write(word + "\n")
-    out_v.write('\t'.join([str(x) for x in vec]) + "\n")
-out_v.close()
-out_m.close()
+# e = model.layers[0]
+# weights = e.get_weights()[0]
+#
+# out_v = io.open('vecs.tsv', 'w', encoding='utf-8')
+# out_m = io.open('meta.tsv', 'w', encoding='utf-8')
+#
+# words = list(vocab)
+# for num, word in enumerate(words):
+#     vec = weights[num]
+#     out_m.write(word + "\n")
+#     out_v.write('\t'.join([str(x) for x in vec]) + "\n")
+# out_v.close()
+# out_m.close()
 
 # Plot training and test acc and loss
 # summarize history for accuracy
