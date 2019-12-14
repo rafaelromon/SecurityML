@@ -2,7 +2,6 @@ import os
 import pickle
 from os import listdir
 from os.path import isfile, join
-
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -12,8 +11,11 @@ from encoder import encode_pe
 from keras.backend import manual_variable_initialization
 from keras.preprocessing.image import load_img, img_to_array
 from keras.preprocessing.sequence import pad_sequences
+from keras_preprocessing.text import tokenizer_from_json
+import json
 
 
+# Prediction for the nsfw images
 def predict(model1, file):
     img_width, img_height = 224, 224
     x = load_img(file, target_size=(img_width, img_height), grayscale=True)
@@ -27,6 +29,7 @@ def predict(model1, file):
 
 manual_variable_initialization(True)
 
+# Loading models
 path_model_malware = os.path.join("models/malware.h5")
 path_model_email = os.path.join("models/spam.h5")
 path_model_sms = os.path.join("models/sms.h5")
@@ -38,13 +41,16 @@ model_sms = tf.keras.models.load_model(path_model_sms, compile=False,
 model_nsfw = tf.keras.models.load_model(path_model_nsfw, compile=False)
 
 max_len = 100
-# loading
-with open(os.path.join('tokenizer.pickle'), 'rb') as handle:
+# loading tokenizers
+with open('tokenizer.pickle', 'rb') as handle:
     tokenizer_email = pickle.load(handle)
 
-with open(os.path.join('word_dict'), 'rb') as handle:
-    tokenizer_sms = pickle.load(handle)
+with open('word_dict.json') as file:
+    data = json.load(file)
+    tokenizer_sms = tokenizer_from_json(data)
 
+
+# Menu options
 df = pd.DataFrame({
     'first column': ["Email", "Malware", "NSFW", "SMS"]
 })
@@ -53,6 +59,7 @@ option = st.sidebar.selectbox(
     'Select which application do you wanna test',
     df['first column'])
 
+# Malware demo
 if option == "Malware":
     st.title('Malware detection')
     st.text("This model has been trained with a dataset with over 200000 .exe "
@@ -66,9 +73,8 @@ if option == "Malware":
 
     st.sidebar.title("Predict New File")
     filename = st.sidebar.selectbox("Pick an executable.", onlyfiles)
-
-    # filename = st.text_input('Enter a file path:')
     try:
+        # Encoding and predicting selected file
         encoded = encode_pe(os.path.join(file_path+filename))
         encoded = [float(x) for x in encoded]
         result = model_malware.predict(np.array([encoded]))[0][0]
@@ -79,12 +85,14 @@ if option == "Malware":
     except FileNotFoundError:
         st.error('File not found.')
 
+# Email demo
 elif option == "Email":
     st.title('Email spam detection')
 
     st.text("This model has been trained with a dataset with over 2500 emails")
 
     email = st.text_input('Enter a sample email')
+    # Email encoding and prediction
     tokenized = tokenizer_email.texts_to_sequences([email])
     sequence_padded = pad_sequences(tokenized, maxlen=max_len)
     try:
@@ -97,8 +105,8 @@ elif option == "Email":
     except FileNotFoundError:
         st.error('Input error')
 
+# NSFW demo
 elif option == "NSFW":
-
     showpred = 0
     img_path = 'dataset/nsfw_classification/'
     st.sidebar.info(
@@ -127,6 +135,7 @@ elif option == "NSFW":
         elif prediction == 1:
             st.write("SFW")
 
+# SMS demo
 elif option == "SMS":
     st.title('SMS spam detection')
 

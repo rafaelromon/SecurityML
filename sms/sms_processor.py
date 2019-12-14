@@ -1,5 +1,5 @@
 import json
-
+import io
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -43,8 +43,12 @@ def process_data(file):
     np.save('{}test_x.npy'.format(output_path), test_features)
     np.save('{}test_y.npy'.format(output_path), test_labels)
 
-    with open('dataset/processed/word_dict.json', 'w') as file:
-        json.dump(tokenizer.word_index, file)
+    # with open('dataset/processed/word_dict.json', 'w', encoding='utf-8') as file:
+    #     json.dump(tokenizer.word_index, file)
+
+    tokenizer_json = tokenizer.to_json()
+    with io.open('dataset/processed/word_dict.json', 'w', encoding='utf-8') as f:
+        f.write(json.dumps(tokenizer_json, ensure_ascii=False))
 
     print('Data processed.')
 
