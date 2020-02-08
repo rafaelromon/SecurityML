@@ -7,12 +7,33 @@ from keras.engine.saving import load_model
 from keras.layers import *
 from mlxtend.plotting import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
+import keras.backend as K
 
 NUMBER_OF_CLASSES = 2
 MAXLEN = 171
 BATCH_SIZE = 100
-EPOCHS = 100
+EPOCHS = 15
 
+
+
+def recall_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+
+def precision_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+
+def f1_m(y_true, y_pred):
+    precision = precision_m(y_true, y_pred)
+    recall = recall_m(y_true, y_pred)
+    return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
 def train():
     X = np.load('dataset/processed/x.npy')
@@ -40,15 +61,22 @@ def train():
         Dropout(dropout_rate),
 
         Dense(2, activation='softmax')
-
     ]
 
-    model = keras.Sequential(model_scheme)
+    model_LSTM = [
+        Embedding(1000, 50, input_length=MAXLEN),
+        LSTM(64),
+        Dense(512, activation='relu'),
+        BatchNormalization(),
+        Dense(2, activation='softmax')
+    ]
+
+    model = keras.Sequential(model_LSTM)
 
     model.compile(
         optimizer=optimizers.Adam(lr=0.0001),
         loss="categorical_crossentropy",
-        metrics=['accuracy'],
+        metrics=['accuracy', f1_m, precision_m, recall_m, tf.keras.metrics.AUC()],
     )
     model.summary()
 
@@ -104,7 +132,7 @@ def plot(model):
 
 if __name__ == '__main__':
     model = train()
-    model.save('../streamlit_web/models/sms.h5')
-    model = load_model("../streamlit_web/models/sms.h5",
-                       custom_objects={"softmax_v2": tf.nn.softmax})
-    plot(model)
+    # model.save('../streamlit_web/models/sms.h5')
+    # model = load_model("../streamlit_web/models/sms.h5",
+    #                    custom_objects={"softmax_v2": tf.nn.softmax})
+    # plot(model)
