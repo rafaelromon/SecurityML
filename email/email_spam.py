@@ -88,9 +88,6 @@ history = model.fit(sequences_matrix, Y_train, batch_size=128, epochs=20,
                     callbacks=[csv_logger, mc, early_stop]
                     )
 
-
-model.save('spam.h5')
-
 e = model.layers[0]
 weights = e.get_weights()[0]
 
