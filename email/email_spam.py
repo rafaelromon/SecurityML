@@ -1,7 +1,6 @@
 import io
 import os
 import pickle
-import csv
 import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
@@ -11,20 +10,26 @@ from tensorflow.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing import sequence
 from tensorflow.keras.preprocessing.text import Tokenizer
-from mlxtend.plotting import plot_confusion_matrix
-from sklearn.metrics import confusion_matrix
 import keras.backend as K
-import numpy as np
 
-def recall_threshold(threshold = 0.5):
-    def recall(y_true, y_pred):
-        threshold_value = threshold
-        y_pred = K.cast(K.greater(K.clip(y_pred, 0, 1), threshold_value), K.floatx())
-        true_positives = K.round(K.sum(K.clip(y_true * y_pred, 0, 1)))
-        possible_positives = K.sum(K.clip(y_true, 0, 1))
-        recall_ratio = true_positives / (possible_positives + K.epsilon())
-        return recall_ratio
+def recall_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
     return recall
+
+
+def precision_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+
+def f1_m(y_true, y_pred):
+    precision = precision_m(y_true, y_pred)
+    recall = recall_m(y_true, y_pred)
+    return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -61,7 +66,6 @@ test_sequences_matrix = sequence.pad_sequences(test_sequences, maxlen=max_len)
 # saving tokenizer
 with open('tokenizer.pickle', 'wb') as handle:
     pickle.dump(tok, handle, protocol=pickle.HIGHEST_PROTOCOL)
-# exit()
 
 
 model = tf.keras.models.Sequential([
@@ -76,9 +80,9 @@ csv_logger = CSVLogger('log.csv')
 early_stop = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=3, mode='min', restore_best_weights=True)
 mc = ModelCheckpoint('spam.h5', monitor='val_loss', mode='min', verbose=1)
 
-model.compile(loss='binary_crossentropy', optimizer=RMSprop(), metrics=['acc', recall_threshold(0.9)])
+model.compile(loss='binary_crossentropy', optimizer=RMSprop(), metrics=['acc', f1_m, precision_m, recall_m, tf.keras.metrics.AUC()])
 
-history = model.fit(sequences_matrix, Y_train, batch_size=128, epochs=10,
+history = model.fit(sequences_matrix, Y_train, batch_size=128, epochs=20,
                     validation_data=(test_sequences_matrix, Y_test),
                     verbose=2,
                     callbacks=[csv_logger, mc, early_stop]
