@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D, BatchNormalization
@@ -10,13 +11,34 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.preprocessing.image import load_img, img_to_array
 from mlxtend.plotting import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix
+from tensorflow.keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint
 from tensorflow_core.python.keras.models import load_model
 from tensorflow.keras.utils import plot_model
+import keras.backend as K
+
+def recall_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+
+def precision_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+
+def f1_m(y_true, y_pred):
+    precision = precision_m(y_true, y_pred)
+    recall = recall_m(y_true, y_pred)
+    return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
 
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 
-BATCH_SIZE = 64
+BATCH_SIZE = 16
 
 PATH = "dataset"
 TRAIN_DIR = os.path.join(PATH, 'train')
@@ -63,13 +85,13 @@ def train():
                                                          directory=TRAIN_DIR,
                                                          shuffle=True,
                                                          target_size=(IMG_HEIGHT, IMG_WIDTH),
-                                                         color_mode="grayscale",  # TODO cambiado para transfer
+                                                         color_mode="rgb",  # TODO cambiado para transfer
                                                          class_mode='binary')
 
     val_data_gen = validation_image_generator.flow_from_directory(batch_size=BATCH_SIZE,
                                                                   directory=VALIDATION_DIR,
                                                                   target_size=(IMG_HEIGHT, IMG_WIDTH),
-                                                                  color_mode="grayscale",
+                                                                  color_mode="rgb",
                                                                   class_mode='binary')
 
     sample_training_images, _ = next(train_data_gen)
@@ -84,40 +106,45 @@ def train():
         Dense(1, activation='sigmoid')
     ])
 
-    model.compile(optimizer='adam',
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
+    model_transfer = tf.keras.models.Sequential([
+        tf.keras.applications.DenseNet201(weights="imagenet", include_top=True),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
 
-    history = model.fit_generator(
+    model_transfer.compile(optimizer='adam',
+                  loss='binary_crossentropy',
+                  metrics=['accuracy', f1_m, precision_m, recall_m, tf.keras.metrics.AUC()])
+
+    csv_logger = CSVLogger('log.csv')
+    early_stop = EarlyStopping(monitor='val_loss', min_delta=0.01, patience=3, mode='min', restore_best_weights=True)
+    mc = ModelCheckpoint('nsfw.h5', monitor='val_loss', mode='min', verbose=1)
+
+    history = model_transfer.fit_generator(
         train_data_gen,
         steps_per_epoch=total_train // BATCH_SIZE,
         epochs=EPOCHS,
         validation_data=val_data_gen,
         validation_steps=total_val // BATCH_SIZE,
-        verbose=2
+        verbose=2,
+        callbacks=[csv_logger, mc, early_stop]
     )
 
-    acc = history.history['accuracy']
-    val_acc = history.history['val_accuracy']
-
-    loss = history.history['loss']
-    val_loss = history.history['val_loss']
-
-    epochs_range = range(EPOCHS)
-
-    plt.figure(figsize=(8, 8))
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs_range, acc, label='Training Accuracy')
-    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-    plt.legend(loc='lower right')
-    plt.title('Training and Validation Accuracy')
-
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs_range, loss, label='Training Loss')
-    plt.plot(epochs_range, val_loss, label='Validation Loss')
-    plt.legend(loc='upper right')
-    plt.title('Training and Validation Loss')
-    plt.savefig("history.png")
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
     plt.show()
 
     return model
@@ -129,7 +156,7 @@ def plot(model):
     validation_generator = test_datagen.flow_from_directory(os.path.join(PATH, 'validation'),
                                                             target_size=(IMG_HEIGHT, IMG_WIDTH),
                                                             batch_size=BATCH_SIZE,
-                                                            color_mode="grayscale",
+                                                            color_mode="rgb",
                                                             class_mode='binary')
 
     Y_pred = model.predict_generator(validation_generator, 249 // BATCH_SIZE + 1)
@@ -158,7 +185,7 @@ def predict(model1, file):
 
 if __name__ == '__main__':
     model = train()
-    model.save("../streamlit_web/models/nsfw.h5")
-    model = load_model("../streamlit_web/models/nsfw.h5")
-    plot_model(model, to_file='model.png', show_shapes=True)
-    plot(model)
+    # model.save("../streamlit_web/models/nsfw.h5")
+    # model = load_model("../streamlit_web/models/nsfw.h5", compile=False)
+    # plot_model(model, to_file='model.png', show_shapes=True)
+    # plot(model)

@@ -18,7 +18,7 @@ import json
 # Prediction for the nsfw images
 def predict(model1, file):
     img_width, img_height = 224, 224
-    x = load_img(file, target_size=(img_width, img_height), grayscale=True)
+    x = load_img(file, target_size=(img_width, img_height), grayscale=False)
     x = img_to_array(x)
     x = np.expand_dims(x, axis=0)
     array = model1.predict(x)
