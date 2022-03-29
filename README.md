@@ -31,12 +31,16 @@
 * [Contributing](#contributing)
 * [License](#license)
 * [Contact](#contact)
+* [Citations](#citations)
 
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
 This is a university project developed for the "Information Security" course at the University of Deusto, for this project we aimed to explore the application of ML techniques to Computer Security.
+
+
+Publication (September, 2021):  [''Deep Learning Applications on Cybersecurity''](https://link-springer-com.focus.lib.kth.se/chapter/10.1007/978-3-030-86271-8_51) was accepted by HAIS 2021.
 
 ### Built With
 
@@ -115,6 +119,12 @@ Distributed under the GPL License. See `LICENSE` for more information.
 
 If you are not that tech savvy feel free to send us any bug reports, ask me any questions or request any features via email, just keep in mind we did this as a university project.
 
+## Citations
+Feel free to cite the following publication:
+
+```
+ @article{lago_romón_lópez_urquijo_tellaeche_bringas_2021, title={Deep learning applications on cybersecurity}, DOI={10.1007/978-3-030-86271-8_51}, journal={Lecture Notes in Computer Science}, author={Lago, Carlos and Romón, Rafael and López, Iker Pastor and Urquijo, Borja Sanz and Tellaeche, Alberto and Bringas, Pablo García}, year={2021}, pages={611–621}} 
+```
 
 
 
